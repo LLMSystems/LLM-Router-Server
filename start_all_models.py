@@ -33,6 +33,20 @@ def launch_all_models(config_path):
         except Exception as e:
             logger.error(f"啟動模型 {model_name} 時發生錯誤: {e}")
             
+    # embedding server
+    embedding_server_cfg = config.get("embedding_server", {})
+    if embedding_server_cfg:
+        try:
+            logger.info("啟動 Embedding / Reranker Server ...")
+            proc = subprocess.Popen([
+                sys.executable, "-m", "embedding_reranker_server.embedding_reranker_launcher",
+                "--config", config_path
+            ], start_new_session=True)
+
+            running_processes["embedding_server"] = proc
+        except Exception as e:
+            logger.error(f"啟動 Embedding Server 失敗: {e}")
+            
 def shutdown_all_models():
     logger.info("關閉所有模型...")
     for model_name, proc in running_processes.items():

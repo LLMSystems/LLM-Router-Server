@@ -1,6 +1,6 @@
 import httpx
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, Response
 
 
 router = APIRouter()
@@ -113,3 +113,39 @@ async def proxy_completion(request: Request):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+    
+@router.post("/v1/embeddings")
+async def proxy_embeddings(request: Request):
+    try:
+        config = request.app.state.config
+        embedding_cfg = config.get("embedding_server", {})
+        host = embedding_cfg.get("host", "localhost")
+        port = embedding_cfg.get("port", 8003)
+        target_url = f"http://{host}:{port}/v1/embeddings"
+
+        body = await request.body()
+        headers = dict(request.headers)
+        headers.pop("host", None)
+        headers.pop("content-length", None)
+
+        async with httpx.AsyncClient(timeout=None) as client:
+            resp = await client.post(
+                target_url,
+                content=body,
+                headers=headers
+            )
+
+        return Response(
+            content=resp.content,
+            status_code=resp.status_code,
+            headers=dict(resp.headers)
+        )
+
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=503, detail=f"Cannot connect to embedding server: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected error: {str(e)}"
+        )
