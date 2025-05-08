@@ -1,4 +1,6 @@
 import argparse
+import copy
+import os
 import signal
 import subprocess
 import sys
@@ -22,10 +24,20 @@ def launch_all_models(config_path):
 
     for model_name, model_cfg in engines.items():
         try:
-            cli_args = build_cli_args_from_dict(model_cfg)
+            model_cfg_cleaned = copy.deepcopy(model_cfg)
+            if model_cfg_cleaned.get("tensor_parallel_size", 1) == 1:
+                cuda_id = model_cfg_cleaned.pop("cuda_device", None)
+                
+            cli_args = build_cli_args_from_dict(model_cfg_cleaned)
             logger.info(f"執行指令: vllm {' '.join(cli_args)}")
+            cuda_env = os.environ.copy()
+            if cuda_id is not None:
+                cuda_env["CUDA_VISIBLE_DEVICES"] = str(cuda_id)
+                logger.info(f"設定 {model_name} 使用 GPU {cuda_id}")
+                
             proc = subprocess.Popen(
                 ["vllm"] + cli_args,
+                env=cuda_env,
                 start_new_session=True
             )
             running_processes[model_name] = proc
@@ -38,10 +50,17 @@ def launch_all_models(config_path):
     if embedding_server_cfg:
         try:
             logger.info("啟動 Embedding / Reranker Server ...")
+
+            cuda_env = os.environ.copy()
+            cuda_device = embedding_server_cfg.get("cuda_device")
+            if cuda_device is not None:
+                cuda_env["CUDA_VISIBLE_DEVICES"] = str(cuda_device)
+                logger.info(f"設定 Embedding Server 使用 GPU {cuda_device}")
+
             proc = subprocess.Popen([
                 sys.executable, "-m", "embedding_reranker_server.embedding_reranker_launcher",
                 "--config", config_path
-            ], start_new_session=True)
+            ], env=cuda_env, start_new_session=True)
 
             running_processes["embedding_server"] = proc
         except Exception as e:
