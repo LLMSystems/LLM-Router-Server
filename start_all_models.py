@@ -33,7 +33,7 @@ def launch_all_models(config_path):
             cuda_env = os.environ.copy()
             if cuda_id is not None:
                 cuda_env["CUDA_VISIBLE_DEVICES"] = str(cuda_id)
-                logger.info(f"設定 {model_name} 使用 GPU {cuda_id}")
+                logger.warning(f"設定 {model_name} 使用 GPU {cuda_id}")
                 
             proc = subprocess.Popen(
                 ["vllm"] + cli_args,
@@ -47,7 +47,9 @@ def launch_all_models(config_path):
             
     # embedding server
     embedding_server_cfg = config.get("embedding_server", {})
-    if embedding_server_cfg:
+    has_embedding = bool(embedding_server_cfg.get("embedding_models"))
+    has_reranking = bool(embedding_server_cfg.get("reranking_models"))
+    if has_embedding or has_reranking:
         try:
             logger.info("啟動 Embedding / Reranker Server ...")
 
@@ -55,7 +57,7 @@ def launch_all_models(config_path):
             cuda_device = embedding_server_cfg.get("cuda_device")
             if cuda_device is not None:
                 cuda_env["CUDA_VISIBLE_DEVICES"] = str(cuda_device)
-                logger.info(f"設定 Embedding Server 使用 GPU {cuda_device}")
+                logger.warning(f"設定 Embedding Server 使用 GPU {cuda_device}")
 
             proc = subprocess.Popen([
                 sys.executable, "-m", "embedding_reranker_server.embedding_reranker_launcher",
@@ -65,12 +67,15 @@ def launch_all_models(config_path):
             running_processes["embedding_server"] = proc
         except Exception as e:
             logger.error(f"啟動 Embedding Server 失敗: {e}")
+    else:
+        logger.warning("未設定任何 embedding_models 或 reranking_models，略過啟動 Embedding Server。")
+    
             
 def shutdown_all_models():
     logger.info("關閉所有模型...")
     for model_name, proc in running_processes.items():
         try:
-            logger.info(f"   → 正在關閉 {model_name} (PID={proc.pid})")
+            logger.warning(f"   → 正在關閉 {model_name} (PID={proc.pid})")
             proc.terminate()
             proc.wait(timeout=5)
         except Exception as e:

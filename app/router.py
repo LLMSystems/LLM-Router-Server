@@ -21,7 +21,7 @@ async def proxy_chat_completion(request: Request):
         port = model_cfg["port"]
         target_url = f"http://{host}:{port}/v1/chat/completions"
 
-        client = httpx.AsyncClient(timeout=None)
+        client = request.app.state.http_client
         stream_ctx = client.stream("POST", target_url, json=request_json)
         response = await stream_ctx.__aenter__()
 
@@ -85,7 +85,7 @@ async def proxy_completion(request: Request):
         port = model_cfg["port"]
         target_url = f"http://{host}:{port}/v1/completions"
 
-        client = httpx.AsyncClient(timeout=None)
+        client = request.app.state.http_client
         stream_ctx = client.stream("POST", target_url, json=request_json)
         response = await stream_ctx.__aenter__()
 
@@ -124,9 +124,9 @@ async def proxy_embeddings(request: Request):
         headers = dict(request.headers)
         headers.pop("host", None)
         headers.pop("content-length", None)
-
-        async with httpx.AsyncClient(timeout=None) as client:
-            resp = await client.post(
+        
+        client = request.app.state.http_client
+        resp = await client.post(
                 target_url,
                 content=body,
                 headers=headers

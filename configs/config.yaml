@@ -1,7 +1,8 @@
 server:
   host: "0.0.0.0"
   port: 8947    
-  uvicorn_log_level: "info"         
+  uvicorn_log_level: "info"  
+  loop: "uvloop"       
 
 LLM_engines:
   # Qwen2.5-1.5B-Instruct-GPTQ-Int4-2:
@@ -14,19 +15,32 @@ LLM_engines:
   #   max_num_seqs: 1
   #   quantization: "gptq"
   #   tensor_parallel_size: 1
-  Qwen2.5-1.5B-Instruct-GPTQ-Int4:
-    model_tag: "Qwen/Qwen2.5-1.5B-Instruct-GPTQ-Int4"
+  # Qwen2.5-1.5B-Instruct-GPTQ-Int4:
+  #   model_tag: "Qwen/Qwen2.5-1.5B-Instruct-GPTQ-Int4"
+  #   host: "localhost"
+  #   port: 8002
+  #   dtype: "float16"
+  #   max_model_len: 2000
+  #   gpu_memory_utilization: 0.3
+  #   max_num_seqs: 1
+  #   quantization: "gptq"
+  #   tensor_parallel_size: 1
+  #   cuda_device: 0
+  #   enable_auto_tool_choice: true
+  #   tool-call-parser: "hermes"
+  Qwen2.5-1.5B-Instruct:
+    model_tag: "Qwen/Qwen2.5-1.5B-Instruct"
     host: "localhost"
     port: 8002
     dtype: "float16"
-    max_model_len: 2000
-    gpu_memory_utilization: 0.3
-    max_num_seqs: 1
-    quantization: "gptq"
+    max_model_len: 32768
+    gpu_memory_utilization: 0.95
+    max_num_seqs: 200
     tensor_parallel_size: 1
     cuda_device: 0
     enable_auto_tool_choice: true
     tool-call-parser: "hermes"
+    guided-decoding-backend: "xgrammar"
 
 
 embedding_server:

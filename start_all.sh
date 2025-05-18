@@ -12,5 +12,9 @@ echo "使用配置檔: $CONFIG_PATH"
 echo "啟動所有模型..."
 python start_all_models.py --config "$CONFIG_PATH" &
 sleep 5
-echo "啟動 router server..."
-python main.py --config "$CONFIG_PATH"
+
+echo "啟動 Router Server（gunicorn + uvloop + 多 worker）..."
+gunicorn main:app -c gunicorn.conf.py --env CONFIG_PATH="$CONFIG_PATH"
+
+# echo "啟動 router server..."
+# python main.py --config "$CONFIG_PATH"
