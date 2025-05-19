@@ -1,12 +1,20 @@
 # LLM-Router-Server
 
-## LLM Server 壓測結果對照（無優化 vs http_client 優化 vs VLLM vs LLM Router Server + uvloop + http_client vs LLM Router Server + uvloop + http_client + gunicorn）
+1.  **背景與目標**
 
-| 並發請求數 | 平均請求延遲 (秒)                                                           | 平均首字延遲 (秒)                                                          | 平均回傳 tokens                                                                      | 平均 tokens/sec（每請求）                                                            | 總吞吐量 tokens/sec                                                                       |
-| ---------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| 1          | 無優化: 2.79<br>http: 2.66<br>VLLM: 1.20<br>uvloop: 1.83<br>gunicorn: 1.67  | 無優化: 0.07<br>http: 0.08<br>VLLM: 0.20<br>uvloop: 0.02<br>gunicorn: 0.02 | 無優化: 356.00<br>http: 313.00<br>VLLM: 130.00<br>uvloop: 228.00<br>gunicorn: 212.00 | 無優化: 127.53<br>http: 117.69<br>VLLM: 108.12<br>uvloop: 124.91<br>gunicorn: 126.76 | 無優化: 127.53<br>http: 117.69<br>VLLM: 108.12<br>uvloop: 124.91<br>gunicorn: 126.76      |
-| 5          | 無優化: 3.16<br>http: 3.91<br>VLLM: 3.20<br>uvloop: 2.37<br>gunicorn: 2.64  | 無優化: 0.53<br>http: 0.24<br>VLLM: 0.23<br>uvloop: 0.26<br>gunicorn: 0.10 | 無優化: 285.80<br>http: 398.80<br>VLLM: 318.80<br>uvloop: 221.60<br>gunicorn: 259.00 | 無優化: 90.37<br>http: 101.92<br>VLLM: 99.59<br>uvloop: 93.37<br>gunicorn: 97.98     | 無優化: 333.11<br>http: 440.66<br>VLLM: 375.47<br>uvloop: 328.98<br>gunicorn: 341.60      |
-| 10         | 無優化: 3.69<br>http: 3.15<br>VLLM: 2.74<br>uvloop: 2.72<br>gunicorn: 3.22  | 無優化: 0.71<br>http: 0.28<br>VLLM: 0.30<br>uvloop: 0.07<br>gunicorn: 0.07 | 無優化: 306.00<br>http: 282.50<br>VLLM: 247.30<br>uvloop: 263.30<br>gunicorn: 323.50 | 無優化: 82.90<br>http: 89.78<br>VLLM: 90.41<br>uvloop: 96.81<br>gunicorn: 100.54     | 無優化: 588.39<br>http: 661.30<br>VLLM: 653.53<br>uvloop: 693.92<br>gunicorn: 654.16      |
-| 20         | 無優化: 4.18<br>http: 3.23<br>VLLM: 3.34<br>uvloop: 3.15<br>gunicorn: 3.74  | 無優化: 1.30<br>http: 0.43<br>VLLM: 0.40<br>uvloop: 0.33<br>gunicorn: 0.39 | 無優化: 275.80<br>http: 273.45<br>VLLM: 278.35<br>uvloop: 268.45<br>gunicorn: 301.30 | 無優化: 65.99<br>http: 84.66<br>VLLM: 83.46<br>uvloop: 85.23<br>gunicorn: 80.48      | 無優化: 857.46<br>http: 1117.44<br>VLLM: 995.27<br>uvloop: 999.42<br>gunicorn: 1120.63    |
-| 50         | 無優化: 5.96<br>http: 3.83<br>VLLM: 3.44<br>uvloop: 4.09<br>gunicorn: 4.01  | 無優化: 2.65<br>http: 0.51<br>VLLM: 0.47<br>uvloop: 0.46<br>gunicorn: 0.49 | 無優化: 280.04<br>http: 280.20<br>VLLM: 246.82<br>uvloop: 295.22<br>gunicorn: 288.96 | 無優化: 47.00<br>http: 73.24<br>VLLM: 71.85<br>uvloop: 72.24<br>gunicorn: 72.13      | 無優化: 1666.86<br>http: 2276.47<br>VLLM: 2263.42<br>uvloop: 2352.19<br>gunicorn: 2281.93 |
-| 100        | 無優化: 10.75<br>http: 6.28<br>VLLM: 5.89<br>uvloop: 5.94<br>gunicorn: 6.27 | 無優化: 5.12<br>http: 0.81<br>VLLM: 0.68<br>uvloop: 0.58<br>gunicorn: 0.57 | 無優化: 288.28<br>http: 284.74<br>VLLM: 268.43<br>uvloop: 276.30<br>gunicorn: 286.34 | 無優化: 26.83<br>http: 45.31<br>VLLM: 45.56<br>uvloop: 46.55<br>gunicorn: 45.67      | 無優化: 2129.36<br>http: 3169.79<br>VLLM: 3057.23<br>uvloop: 3171.11<br>gunicorn: 3219.35 |
+    > 2024/09 版本過於老舊，擴展不易，更新困難，因此著手開發易維護、高效、生產級 LLM Server (支援其餘 NLP 模型)
+
+2.  **開發時程 & 優化紀錄**
+    > - 2025/03-04 : 思考新 LLM Server 架構與開發方向
+        結論 : 採用路由狀態管理 Server 為主要開發架構，優點為 Server 端與模型端完全隔離，維護容易，推理架構迭代容易，容易支持複數模型
+    > - 2025/05/06 : 開發初步架構
+        開發 : 新增 LLM 路由伺服器的基本架構，包括配置加載、路由處理、模型啟動及 Docker 支援
+    > - 2025/05/08 : 開發初步架構
+        開發 : 新增嵌入伺服器及重排序伺服器功能，包括模型加載、配置管理及 API 路由處理
+    > - 2025/05/15 : 修復假流式回應延遲問題
+        修復 : 首字延遲恢復正常狀態
+    > - 2025/05/18 : 共用 AsyncClient：解決 connection overhead
+        優化 : 復用 connection pool，大幅降低連線建立成本與延遲，併發 > 10 情境下明顯提升吞吐量與首字延遲，吞吐提升 150% 左右
+    > - 2025/05/18 : uvloop：優化 asyncio 排程
+        優化 : 更快的排程與底層 IO 處理，併發 > 100 情境下並降低 stream 回應時間、縮短首字延遲 30% 左右
+    > - 2025/05/18 : gunicorn：啟用多 worker 支援並行處理
