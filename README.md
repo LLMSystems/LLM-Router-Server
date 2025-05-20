@@ -130,8 +130,10 @@ embedding_server:
       use_float16: true
 ```
 ### 2. 配置 `gunicorn.conf.py`
-**1. 務必放在與 `main.py` 同個層級下**
-**2. 路由配置務必與 `configs/config.yaml` 相同**
+
+1. 務必放在與 `main.py` 同個層級下
+2. 路由配置務必與 `configs/config.yaml` 相同
+
 ```python=
 # gunicorn.conf.py
 
