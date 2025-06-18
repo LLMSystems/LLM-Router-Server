@@ -22,29 +22,33 @@ def launch_all_models(config_path):
     config = load_config(path=config_path)
     engines = config.get("LLM_engines", {})
 
-    for model_name, model_cfg in engines.items():
-        try:
-            model_cfg_cleaned = copy.deepcopy(model_cfg)
-            if model_cfg_cleaned.get("tensor_parallel_size", 1) == 1:
-                cuda_id = model_cfg_cleaned.pop("cuda_device", None)
+    if not engines:
+        logger.warning("未設定任何 LLM 引擎，跳過啟動模型。")
+    else:
+        logger.info(f"找到 {len(engines)} 個 LLM 引擎，準備啟動...")
+        for model_name, model_cfg in engines.items():
+            try:
+                model_cfg_cleaned = copy.deepcopy(model_cfg)
+                if model_cfg_cleaned.get("tensor_parallel_size", 1) == 1:
+                    cuda_id = model_cfg_cleaned.pop("cuda_device", None)
+                    
+                cli_args = build_cli_args_from_dict(model_cfg_cleaned)
+                logger.info(f"執行指令: vllm {' '.join(cli_args)}")
+                cuda_env = os.environ.copy()
+                if cuda_id is not None:
+                    cuda_env["CUDA_VISIBLE_DEVICES"] = str(cuda_id)
+                    logger.warning(f"設定 {model_name} 使用 GPU {cuda_id}")
+                    
+                proc = subprocess.Popen(
+                    ["vllm"] + cli_args,
+                    env=cuda_env,
+                    start_new_session=True
+                )
+                running_processes[model_name] = proc
+                time.sleep(2)
+            except Exception as e:
+                logger.error(f"啟動模型 {model_name} 時發生錯誤: {e}")
                 
-            cli_args = build_cli_args_from_dict(model_cfg_cleaned)
-            logger.info(f"執行指令: vllm {' '.join(cli_args)}")
-            cuda_env = os.environ.copy()
-            if cuda_id is not None:
-                cuda_env["CUDA_VISIBLE_DEVICES"] = str(cuda_id)
-                logger.warning(f"設定 {model_name} 使用 GPU {cuda_id}")
-                
-            proc = subprocess.Popen(
-                ["vllm"] + cli_args,
-                env=cuda_env,
-                start_new_session=True
-            )
-            running_processes[model_name] = proc
-            time.sleep(2)
-        except Exception as e:
-            logger.error(f"啟動模型 {model_name} 時發生錯誤: {e}")
-            
     # embedding server
     embedding_server_cfg = config.get("embedding_server", {})
     has_embedding = bool(embedding_server_cfg.get("embedding_models"))
