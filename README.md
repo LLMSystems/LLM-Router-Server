@@ -64,70 +64,91 @@ LLM Router Server 是一個針對多模型部署場景設計的輕量級路由�
 ```yaml=
 server:
   host: "0.0.0.0"
-  port: 8947    
-  uvicorn_log_level: "info"  
-  loop: "uvloop"       
+  port: 8887    
+  uvicorn_log_level: "info"         
 
 LLM_engines:
-  Qwen2.5-1.5B-Instruct-GPTQ-Int4-2:
-    model_tag: "Qwen/Qwen2.5-1.5B-Instruct-GPTQ-Int4"
+  # 33.448 GB
+  Qwen2.5-14B-Instruct:
+    model_tag: "models/Qwen2.5-14B-Instruct"
     host: "localhost"
     port: 8001
     dtype: "float16"
-    max_model_len: 2000
-    gpu_memory_utilization: 0.3
-    max_num_seqs: 1
-    quantization: "gptq"
+    max_model_len: 16000
+    gpu_memory_utilization: 0.4
+    max_num_seqs: 10
     tensor_parallel_size: 1
-  Qwen2.5-1.5B-Instruct-GPTQ-Int4:
-    model_tag: "Qwen/Qwen2.5-1.5B-Instruct-GPTQ-Int4"
+    cuda_device: 1
+    enable_auto_tool_choice: true
+    tool-call-parser: "hermes"
+  # 32.712 GB
+  Qwen2.5-32B-Instruct-GPTQ-Int4:
+    model_tag: "models/Qwen2.5-32B-Instruct-GPTQ-Int4"
     host: "localhost"
     port: 8002
     dtype: "float16"
-    max_model_len: 2000
-    gpu_memory_utilization: 0.3
-    max_num_seqs: 1
-    quantization: "gptq"
+    max_model_len: 16000
+    gpu_memory_utilization: 0.37
+    max_num_seqs: 10
     tensor_parallel_size: 1
-    cuda_device: 0
+    cuda_device: 1
     enable_auto_tool_choice: true
     tool-call-parser: "hermes"
-  Qwen2.5-1.5B-Instruct:
-    model_tag: "Qwen/Qwen2.5-1.5B-Instruct"
+  Qwen2.5-3B-Instruct:
+    model_tag: "models/Qwen2.5-3B-Instruct"
     host: "localhost"
     port: 8003
     dtype: "float16"
-    max_model_len: 32768
-    gpu_memory_utilization: 0.95
-    max_num_seqs: 200
+    max_model_len: 5000
+    gpu_memory_utilization: 0.1
+    max_num_seqs: 10
     tensor_parallel_size: 1
-    cuda_device: 0
+    cuda_device: 1
     enable_auto_tool_choice: true
     tool-call-parser: "hermes"
-    guided-decoding-backend: "xgrammar"
+  Qwen3-14B:
+    model_tag: "models/models--Qwen--Qwen3-14B/snapshots/231c69a380487f6c0e52d02dcf0d5456d1918201"
+    host: "localhost"
+    port: 8004
+    dtype: "float16"
+    max_model_len: 16000
+    gpu_memory_utilization: 0.4
+    max_num_seqs: 10
+    tensor_parallel_size: 1
+    cuda_device: 0
+    reasoning_parser: "qwen3"
+    enable_auto_tool_choice: true
+    tool-call-parser: "hermes"
 
 embedding_server:
   host: "localhost"
-  port: 8004
-  cuda_device: 0 
+  port: 8005
+  cuda_device: 1
 
   embedding_models:
     m3e-base:
       model_name: "moka-ai/m3e-base"
-      model_path: "./embedding_reranker_server/embedding_engine/model/embedding_model/m3e-base-model"
-      tokenizer_path: "./embedding_reranker_server/embedding_engine/model/embedding_model/m3e-base-tokenizer"
+      model_path: "./models/embedding_engine/model/embedding_model/m3e-base-model"
+      tokenizer_path: "./models/embedding_engine/model/embedding_model/m3e-base-tokenizer"
       max_length: 512
-      use_gpu: true
-      use_float16: true
+      use_gpu: True
+      use_float16: True
+    bge-m3:
+      model_name: "BAAI/bge-m3"
+      model_path: "./models/embedding_engine/model/embedding_model/bge-m3-model"
+      tokenizer_path: "./models/embedding_engine/model/embedding_model/bge-m3-tokenizer"
+      max_length: 512
+      use_gpu: True
+      use_float16: True
 
   reranking_models:
     bge-reranker-large:
       model_name: "BAAI/bge-reranker-large"
-      model_path: "./embedding_reranker_server/embedding_engine/model/reranking_model/bge-reranker-large-model"
-      tokenizer_path: "./embedding_reranker_server/embedding_engine/model/reranking_model/bge-reranker-large-tokenizer"
+      model_path: "./models/embedding_engine/model/reranking_model/bge-reranker-large-model"
+      tokenizer_path: "./models/embedding_engine/model/reranking_model/bge-reranker-large-tokenizer"
       max_length: 512
       use_gpu: true
-      use_float16: true
+      use_float16: True
 ```
 ### 2. 配置 `gunicorn.conf.py`
 
