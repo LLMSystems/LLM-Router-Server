@@ -3,11 +3,13 @@
 CONFIG_PATH=$1
 
 if [ -z "$CONFIG_PATH" ]; then
-  echo "請提供 config.yaml 路徑，例如: ./start_all.sh ./configs/config.yaml"
+  echo "請提供 config.yaml 路徑，例如: ./start_all.sh ./configs/config_formal.yaml"
   exit 1
 fi
 
 echo "使用配置檔: $CONFIG_PATH"
+
+export TORCH_CUDA_ARCH_LIST="8.0"
 
 echo "啟動所有模型..."
 python start_all_models.py --config "$CONFIG_PATH" &

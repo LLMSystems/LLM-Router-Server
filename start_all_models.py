@@ -17,6 +17,26 @@ logger = init_logger(__name__)
 
 running_processes: Dict[str, subprocess.Popen] = {}
 
+def wait_for_model_ready(log_path, timeout=600, model_name=""):
+    start_time = time.time()
+    last_log_time = 0
+    while time.time() - start_time < timeout:
+        if os.path.exists(log_path):
+            with open(log_path, "r", encoding="utf-8") as f:
+                logs = f.read()
+                if ("Started server process" in logs and
+                    "Waiting for application startup." in logs and
+                    "Application startup complete." in logs):
+                    logger.info(f"{model_name} 已偵測到完整啟動訊號。")
+                    return True
+        if time.time() - last_log_time > 10:
+            logger.info(f"仍在等待 {model_name} 啟動中...")
+            last_log_time = time.time()
+        time.sleep(2)
+    return False
+
+
+
 def launch_all_models(config_path):
     env_setup()
     config = load_config(path=config_path)
@@ -39,16 +59,31 @@ def launch_all_models(config_path):
                     cuda_env["CUDA_VISIBLE_DEVICES"] = str(cuda_id)
                     logger.warning(f"設定 {model_name} 使用 GPU {cuda_id}")
                     
-                proc = subprocess.Popen(
-                    ["vllm"] + cli_args,
-                    env=cuda_env,
-                    start_new_session=True
-                )
+                log_path = f"./logs/{model_name}.log"
+                os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+                if os.path.exists(log_path) and os.path.getsize(log_path) > 0:
+                    logger.info(f"{model_name} 的 log 檔案已存在且不為空，將清空。")
+                    with open(log_path, "w", encoding="utf-8") as f:
+                        f.truncate(0)
+
+                with open(log_path, "w") as log_file:
+                    proc = subprocess.Popen(
+                        ["vllm"] + cli_args,
+                        env=cuda_env,
+                        stdout=log_file,
+                        stderr=subprocess.STDOUT,
+                        start_new_session=True
+                    )
                 running_processes[model_name] = proc
-                time.sleep(2)
+                logger.info(f"等待 {model_name} 啟動完成...")
+                if wait_for_model_ready(log_path, model_name=model_name):
+                    logger.info(f"{model_name} 啟動完成，繼續下一個模型。")
+                else:
+                    logger.warning(f"{model_name} 啟動超時，可能啟動失敗。")
             except Exception as e:
                 logger.error(f"啟動模型 {model_name} 時發生錯誤: {e}")
-                
+                    
     # embedding server
     embedding_server_cfg = config.get("embedding_server", {})
     has_embedding = bool(embedding_server_cfg.get("embedding_models"))
