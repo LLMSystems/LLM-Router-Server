@@ -1,82 +1,136 @@
-# LLM-Router-Server
 
-**2024/09 版本過於老舊，擴展不易，更新困難，因此著手開發易維護、高效、生產級 LLM Server (支援其餘 NLP 模型)**
+<p align="center">
+  高效能多模型路由與管理服務
+</p>
 
-### 📅 2025/03–04
-
--   🔧 **思考**  
-    採用「路由狀態管理」架構：模型端與 Server 隔離、支援多模型與推理架構迭代
 
 ---
 
-### 📅 2025/05/06
+## 專案介紹
 
--   🔧 **開發**  
-    建立 LLM 路由伺服器基本架構：支援配置加載、模型啟動、API 路由、Docker 容器整合
+**LLM Router Server** 是一個專為多模型部署場景設計的高效能路由服務，用於統一管理和調度多個本地大型語言模型（LLM）、Embedding 模型、Re-ranking 模型等推理服務。
 
----
+### 主要功能
 
-### 📅 2025/05/08
+- **統一路由管理**：整合多個獨立的 vLLM 服務、Embedding 服務與 Reranker 服務
+- **OpenAI 兼容 API**：提供完整相容的 OpenAI API 介面（`/v1/chat/completions`、`/v1/completions`、`/v1/embeddings`）
+- **配置式部署**：透過 YAML 配置檔輕鬆管理多個模型的啟動參數、埠口、GPU 分配等
+- **多模型並行**：支援多個模型實例同時運行，每個模型使用獨立的進程與 GPU 資源
+- **高效能轉發**：基於 FastAPI + Gunicorn + Uvloop 的高效能異步架構
+- **流式響應優化**：對流式請求進行優化，確保低延遲、穩定的 Token 輸出
 
--   🔧 **開發**  
-    新增嵌入與重排序伺服器：涵蓋模型加載、配置管理、API 路由處理
+### 使用場景
 
----
-
-### 📅 2025/05/15
-
--   🛠️ **修復**  
-    解決假流式回應的首字延遲問題，恢復正常表現
-
----
-
-### 📅 2025/05/18
-
--   **優化（高併發）**
-    -   共用 `AsyncClient`：降低連線開銷，併發 >10 吞吐提升 150%
-    -   強化底層排程與 IO：併發 >100 回應時間縮短，首字延遲減少 30%
-    -   啟用 gunicorn 多 worker：提升並行處理能力
+- **多模型服務部署**：在單台或多台伺服器上部署多個 LLM 模型
+- **模型負載均衡**：根據業務需求動態選擇不同的模型
+- **統一 API 介面**：為不同模型提供統一的 API 端點
+- **RAG 應用**：整合 Embedding 與 Reranking 服務，構建完整的檢索增強生成系統
 
 ---
 
-**目前階段**：已完成伺服器基本架構，進入性能優化階段，具備支援多模型的可擴展性。
+## 特色
 
----
+### 多模型獨立運行
+- 每個 LLM 模型透過獨立進程啟動，使用不同的埠與 CUDA 裝置
+- 支援動態配置模型數量、GPU 記憶體分配、並行請求數等參數
+- 模型之間互不干擾，單一模型故障不影響其他服務
 
-## A. 介紹
-LLM Router Server 是一個針對多模型部署場景設計的輕量級路由服務，用於統一管理和調度多個本地 LLM（如 vLLM）、Embedding 模型、Re-ranking 模型等推理服務。它提供與 OpenAI 兼容的 API（如 `/v1/chat/completions`, `/v1/completions`, `/v1/embeddings`），方便接入現有應用與客戶端 SDK（如 `openai`）。
-專案啟動支援配置式啟動，允許從 `config.yaml` 中自定義模型清單、每個模型的埠口、推理參數、以及 GPU 指派等資訊，實現**多模型獨立推理、集中轉發管理**。
-## B. 特色
-### 支援多個 LLM 實例獨立運行
-- 每個模型透過獨立進程啟動，使用不同的埠與 CUDA
-### 支援 Embedding 與 Reranker 伺服器整合
-- Embedding/Reranker Server 與 Router 整合，轉發 `/v1/embeddings` 請求
-- 同時支援向量嵌入與排序評分任務
+### Embedding 與 Reranker 整合
+- 內建 Embedding 伺服器與 Reranker 伺服器
+- 支援多個 Embedding 模型（m3e-base、bge-m3 等）
+- 支援多個 Reranking 模型（bge-reranker-large 等）
+- 統一轉發 `/v1/embeddings` 請求
 
 ### 完全相容 OpenAI SDK
+- 支援使用 OpenAI Python SDK 直接調用
+- 無需修改現有代碼，僅需更改 `base_url`
+- 支援所有標準參數（temperature、top_p、max_tokens 等）
 
-### 流式請求穩定
-- 經測試，Router Server 幾乎不影響請求延遲，保證首字延遲低、Token 穩定輸出
+### 工作流程
 
-## C.用法
-### 1. 設定模型配置
-請參考範例 `configs/config.yaml`：
-```yaml=    
+1. **客戶端請求**：客戶端透過 OpenAI SDK 或 HTTP 客戶端向 Router Server 發送請求
+2. **路由解析**：Router 根據請求中的 `model` 參數查找對應的後端服務配置
+3. **請求轉發**：將請求轉發至對應的 vLLM 或 Embedding 服務
+4. **流式處理**：對流式響應進行優化處理，確保低延遲傳輸
+5. **響應返回**：將後端服務的響應原樣返回給客戶端
+
+---
+
+## 目錄結構
+
+```
+LLM-Router-Server/
+├── configs/                    # 配置檔目錄
+│   ├── config.yaml            # 主要配置檔（模型、伺服器設定）
+│   └── gunicorn.conf.py       # Gunicorn 配置檔
+├── docker/                     # Docker 相關檔案
+│   ├── Dockerfile             # Docker 映像構建檔
+│   └── docker-compose.yaml    # Docker Compose 配置
+├── logs/                       # 日誌目錄
+├── scripts/                    # 啟動腳本目錄
+│   ├── start_all_models.py    # 啟動所有模型的 Python 腳本
+│   └── start_all.sh           # 一鍵啟動腳本（模型 + Router）
+├── src/                        # 主要源碼目錄
+│   ├── embedding_reranker/    # Embedding 與 Reranker 模組
+│   │   ├── __init__.py
+│   │   ├── embedding_reranker_launcher.py  # 啟動器
+│   │   ├── schema.py          # 資料結構定義
+│   │   └── embedding_engine/  # 推理引擎
+│   │       ├── baseinferencer.py  # 基礎推理類
+│   │       ├── embed_rerank.py    # Embedding/Rerank 實作
+│   │       ├── generator.py       # 生成器
+│   │       └── optimize.py        # 優化工具
+│   ├── llm_router/            # LLM 路由模組
+│   │   ├── __init__.py
+│   │   ├── config_loader.py   # 配置載入器
+│   │   ├── env.py             # 環境變數管理
+│   │   ├── main.py            # FastAPI 應用入口
+│   │   ├── router.py          # 路由處理邏輯
+│   │   └── vllm_launcher.py   # vLLM 啟動器
+│   └── metrics/               # 監控與指標
+│       └── basic_metrics.py   # 基礎指標收集
+├── test/                       # 測試檔案目錄
+│   └── test_router_server.py  # Router 伺服器測試
+├── requirements.txt            # Python 依賴清單
+└── README.md                   # 專案說明文件
+```
+
+---
+
+## 安裝指南
+
+### 安裝依賴
+
+```bash
+pip install -r requirements.txt
+```
+
+## 配置說明
+
+### 1. 編輯配置檔
+
+主要配置檔位於 `configs/config.yaml`，包含兩個主要部分：
+
+#### LLM 引擎配置
+
+配置一個或多個 LLM 模型：
+```yaml
 LLM_engines:
-  # 33.448 GB
+  # 第一個模型
   Qwen2.5-14B-Instruct:
-    model_tag: "models/Qwen2.5-14B-Instruct"
-    host: "localhost"
-    port: 8001
-    dtype: "float16"
-    max_model_len: 16000
-    gpu_memory_utilization: 0.4
-    max_num_seqs: 10
-    tensor_parallel_size: 1
-    cuda_device: 1
-    enable_auto_tool_choice: true
-    tool-call-parser: "hermes"
-  # 32.712 GB
+    model_tag: "models/Qwen2.5-14B-Instruct"  # 模型路徑或 
+    host: "localhost"                          # 服務主機
+    port: 8001                                 # 服務埠口
+    dtype: "float16"                           # 資料類型
+    max_model_len: 16000                       # 最大序列長度
+    gpu_memory_utilization: 0.4                # GPU 記憶體使用率
+    max_num_seqs: 10                           # 最大並行序列數
+    tensor_parallel_size: 1                    # Tensor 並行大小
+    cuda_device: 1                             # 使用的 CUDA 裝置編號
+    enable_auto_tool_choice: true              # 啟用自動工具選擇
+    tool-call-parser: "hermes"                 # 工具調用解析器
+  
+  # 第二個模型
   Qwen2.5-32B-Instruct-GPTQ-Int4:
     model_tag: "models/Qwen2.5-32B-Instruct-GPTQ-Int4"
     host: "localhost"
@@ -89,53 +143,32 @@ LLM_engines:
     cuda_device: 1
     enable_auto_tool_choice: true
     tool-call-parser: "hermes"
-  Qwen2.5-3B-Instruct:
-    model_tag: "models/Qwen2.5-3B-Instruct"
-    host: "localhost"
-    port: 8003
-    dtype: "float16"
-    max_model_len: 5000
-    gpu_memory_utilization: 0.1
-    max_num_seqs: 10
-    tensor_parallel_size: 1
-    cuda_device: 1
-    enable_auto_tool_choice: true
-    tool-call-parser: "hermes"
-  Qwen3-14B:
-    model_tag: "models/models--Qwen--Qwen3-14B/snapshots/231c69a380487f6c0e52d02dcf0d5456d1918201"
-    host: "localhost"
-    port: 8004
-    dtype: "float16"
-    max_model_len: 16000
-    gpu_memory_utilization: 0.4
-    max_num_seqs: 10
-    tensor_parallel_size: 1
-    cuda_device: 0
-    reasoning_parser: "qwen3"
-    enable_auto_tool_choice: true
-    tool-call-parser: "hermes"
 
+# Embedding 與 Reranking 伺服器配置
 embedding_server:
   host: "localhost"
   port: 8005
   cuda_device: 1
 
+  # Embedding 模型列表
   embedding_models:
     m3e-base:
       model_name: "moka-ai/m3e-base"
       model_path: "./models/embedding_engine/model/embedding_model/m3e-base-model"
       tokenizer_path: "./models/embedding_engine/model/embedding_model/m3e-base-tokenizer"
       max_length: 512
-      use_gpu: True
-      use_float16: True
+      use_gpu: true
+      use_float16: true
+    
     bge-m3:
       model_name: "BAAI/bge-m3"
       model_path: "./models/embedding_engine/model/embedding_model/bge-m3-model"
       tokenizer_path: "./models/embedding_engine/model/embedding_model/bge-m3-tokenizer"
       max_length: 512
-      use_gpu: True
-      use_float16: True
+      use_gpu: true
+      use_float16: true
 
+  # Reranking 模型列表
   reranking_models:
     bge-reranker-large:
       model_name: "BAAI/bge-reranker-large"
@@ -143,25 +176,185 @@ embedding_server:
       tokenizer_path: "./models/embedding_engine/model/reranking_model/bge-reranker-large-tokenizer"
       max_length: 512
       use_gpu: true
-      use_float16: True
+      use_float16: true
 ```
-### 2. 配置 `./configs/gunicorn.conf.py`
 
-```python=
+#### 配置參數說明
+
+**LLM 引擎參數：**
+- `model_tag`：模型檔案路徑或 HuggingFace 模型 ID
+- `host`：vLLM 服務監聽的主機地址
+- `port`：vLLM 服務監聽的埠口
+- `dtype`：模型精度類型（`float16`、`bfloat16` 等）
+- `max_model_len`：最大上下文長度
+- `gpu_memory_utilization`：GPU 記憶體使用率（0.0-1.0）
+- `max_num_seqs`：最大並行處理的請求數
+- `tensor_parallel_size`：Tensor 並行度（多 GPU 推理）
+- `cuda_device`：指定使用的 GPU 裝置編號
+- `enable_auto_tool_choice`：是否啟用自動工具選擇
+- `tool-call-parser`：工具調用解析器類型
+
+**Embedding 伺服器參數：**
+- `host`、`port`：伺服器監聽地址與埠口
+- `cuda_device`：使用的 GPU 裝置
+- `model_path`：模型權重檔案路徑
+- `tokenizer_path`：Tokenizer 檔案路徑
+- `max_length`：最大序列長度
+- `use_gpu`：是否使用 GPU
+- `use_float16`：是否使用 FP16 精度
+
+### 2. 配置 Gunicorn
+
+編輯 `configs/gunicorn.conf.py`：
+
+```python
 # gunicorn.conf.py
-
 import os
 
+# 綁定地址與埠口
 bind = "0.0.0.0:8947"
+
+# Worker 數量（建議設為 CPU 核心數）
 workers = 4
+
+# Worker 類別（使用 Uvicorn Worker 支援 ASGI）
 worker_class = "uvicorn.workers.UvicornWorker"
+
+# 超時時間（0 表示無限）
 timeout = 0
+
+# 日誌等級
 loglevel = "info"
-accesslog = "-"  
-errorlog = "-"   
-preload_app = False  
+
+# 訪問日誌輸出到標準輸出
+accesslog = "-"
+
+# 錯誤日誌輸出到標準輸出
+errorlog = "-"
+
+# 是否預載入應用
+preload_app = False
 ```
-### 啟動所有模型與路由服務
-```bash=
+
+---
+
+## 使用指南
+
+### 1. 啟動所有服務
+
+使用一鍵啟動腳本：
+
+```bash
 sh scripts/start_all.sh ./configs/config.yaml ./configs/gunicorn.conf.py
 ```
+
+這個腳本會依序執行：
+1. 啟動所有配置的 vLLM 模型服務
+2. 啟動 Embedding 與 Reranker 服務（如果已配置）
+3. 啟動 Router Server（使用 Gunicorn + 多 Worker）
+
+### 3. 驗證服務狀態
+
+檢查所有可用模型：
+
+```bash
+curl http://localhost:8947/v1/models
+```
+
+### 4. 使用 OpenAI SDK 調用
+
+#### Chat Completions（對話生成）
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="EMPTY",
+    base_url="http://localhost:8947/v1"
+)
+
+# 非流式請求
+response = client.chat.completions.create(
+    model="Qwen2.5-14B-Instruct",
+    messages=[
+        {"role": "system", "content": "你是一個有幫助的助手。"},
+        {"role": "user", "content": "請介紹一下 Python 的優點。"}
+    ],
+    temperature=0.7,
+    max_tokens=500
+)
+
+print(response.choices[0].message.content)
+
+# 流式請求
+stream = client.chat.completions.create(
+    model="Qwen2.5-14B-Instruct",
+    messages=[
+        {"role": "user", "content": "寫一首關於春天的詩。"}
+    ],
+    temperature=0.8,
+    stream=True
+)
+
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+#### Embeddings（文本嵌入）
+
+```python
+response = client.embeddings.create(
+    model="m3e-base",
+    input=["這是第一段文本", "這是第二段文本"]
+)
+
+# 取得嵌入向量
+embedding_1 = response.data[0].embedding
+embedding_2 = response.data[1].embedding
+
+print(f"嵌入向量維度: {len(embedding_1)}")
+```
+
+#### Reranking（重排序）
+
+```python
+documents = [
+    "機器學習最好透過專案來學習。",
+    "理論對於理解機器學習至關重要。",
+    "實作教程是學習機器學習的最佳方式。"
+]
+
+response = client.embeddings.create(
+    model="bge-reranker-large",
+    input=documents,
+    extra_body={"query": "如何學習機器學習？"}
+)
+
+# 取得重排序分數
+for idx, item in enumerate(response.data):
+    print(f"文檔 {idx}: 分數 {item.embedding}")
+```
+
+---
+
+## API 文檔
+
+### 端點列表
+
+| 端點 | 方法 | 描述 |
+|------|------|------|
+| `/v1/chat/completions` | POST | 對話生成（支援流式） |
+| `/v1/completions` | POST | 文本補全（支援流式） |
+| `/v1/embeddings` | POST | 文本嵌入 / 重排序 |
+| `/v1/models` | GET | 列出所有可用模型 |
+
+### 專案內部文檔
+
+- `LLM Router Streaming 問題紀錄與解法.md`：流式響應優化說明
+- `LLM Router 吞吐優化.md`：吞吐量優化指南
+
+---
+
+## License
+This project is licensed under the MIT License.
