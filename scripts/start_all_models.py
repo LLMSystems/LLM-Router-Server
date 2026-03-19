@@ -9,9 +9,9 @@ from typing import Dict
 
 from vllm.logger import init_logger
 
-from app.config_loader import load_config
-from app.env import env_setup
-from app.vllm_launcher import build_cli_args_from_dict
+from src.llm_router.config_loader import load_config
+from src.llm_router.env import env_setup
+from src.llm_router.vllm_launcher import build_cli_args_from_dict
 
 logger = init_logger(__name__)
 

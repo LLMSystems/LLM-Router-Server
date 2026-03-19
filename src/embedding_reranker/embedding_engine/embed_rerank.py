@@ -1,9 +1,12 @@
-import torch
 import os
-from transformers import AutoModelForSequenceClassification, AutoModel, AutoTokenizer
 
-# from qdrant_db.baseinferencer import BaseInferencer
-from embedding_reranker_server.embedding_engine.baseinferencer import BaseInferencer
+import torch
+from transformers import (AutoModel, AutoModelForSequenceClassification,
+                          AutoTokenizer)
+
+from src.embedding_reranker.embedding_engine.baseinferencer import \
+    BaseInferencer
+
 
 class Reranker(BaseInferencer):
     def load_model(self, model_path):
@@ -197,7 +200,8 @@ class OnnxReranker():
         onnx_file = self.search_onnxfile(model_path, ".onnx")
         if onnx_file:
             try:
-                from optimum.onnxruntime import ORTModelForSequenceClassification
+                from optimum.onnxruntime import \
+                    ORTModelForSequenceClassification
                 self.logger.info(f"[Embedder] Loading ORT model {onnx_file}")
                 self.model = ORTModelForSequenceClassification.from_pretrained(
                     model_id=model_path,

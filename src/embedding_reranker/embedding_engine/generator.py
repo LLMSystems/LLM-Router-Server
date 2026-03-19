@@ -1,16 +1,15 @@
-import yaml
 import logging
 import os
 
-from transformers import AutoModelForSequenceClassification, AutoModel, AutoTokenizer
+import yaml
+from transformers import (AutoModel, AutoModelForSequenceClassification,
+                          AutoTokenizer)
 
-from embedding_reranker_server.embedding_engine.embed_rerank import (
-    Embedder, 
-    Reranker, 
-    OnnxEmbedder, 
-    OnnxReranker,
-    JinaEmbedder
-)
+from src.embedding_reranker.embedding_engine.embed_rerank import (Embedder,
+                                                                  JinaEmbedder,
+                                                                  OnnxEmbedder,
+                                                                  OnnxReranker,
+                                                                  Reranker)
 
 
 class EmbedRerankBuilder:
@@ -160,51 +159,3 @@ class EmbedRerankBuilder:
                 )
             setattr(self, key, model)
             self.model_name.append(key)
-
-# if __name__ == "__main__":
-#     logger = Logger().get_logger()
-#     builder = EmbedRerankBuilder(config_path='./example_configs/qdrant_config.yaml', logger=logger)
-    # print(builder.config)
-#     # texts = ['A man travels through time and witnesses the evolution of humanity.', 'A young boy is trained to become a military leader in a war against an alien race.', 'A dystopian society where people are genetically engineered and conditioned to conform to a strict social hierarchy.', 'A comedic science fiction series following the misadventures of an unwitting human and his alien friend.', 'A desert planet is the site of political intrigue and power struggles.', 'A mathematician develops a science to predict the future of humanity and works to save civilization from collapse.', 'A futuristic world where the internet has evolved into a virtual reality metaverse.', 'A hacker is hired to pull off a near-impossible hack and gets pulled into a web of intrigue.', 'A Martian invasion of Earth throws humanity into chaos.', 'A dystopian society where teenagers are forced to fight to the death in a televised spectacle.']
-#     texts = [
-#         "I love machine learning",
-#         "I love deep learning",
-#         "I love data science",
-#         "I love machine learning",
-#         "I love deep learning",
-#         "I love data science"
-#     ]
-#     embeddings = builder.embedding_model.get_embeddings(texts)
-#     print(embeddings)
-#     print(embeddings.shape)
-
-
-#     builder = EmbedRerankBuilder(config_path='./example_configs/qdrant_config.yaml')
-#     query = "What is the best method for learning machine learning?"
-#     documents = [
-#         "Machine learning is taught best through projects.",
-#         "Theory is essential for understanding machine learning.",
-#         "Practical tutorials are the best way to learn machine learning.",
-#         "Machine learning is taught best through projects.",
-#         "Theory is essential for understanding machine learning.",
-#         "Practical tutorials are the best way to learn machine learning.",
-#         "Machine learning is taught best through projects.",
-#         "Theory is essential for understanding machine learning.",
-#         "Practical tutorials are the best way to learn machine learning."
-#     ]
-#     scores = builder.reranking_model.rerank(query, documents)
-#     print(scores)
-    
-#     texts = [
-#         "I love machine learning",
-#         "I love deep learning",
-#         "I love data science",
-#         "I love machine learning",
-#         "I love deep learning",
-#         "I love data science"
-#     ]
-    
-#     embeddings = builder.embedding_model.get_embeddings(texts)
-#     print(embeddings)
-#     print(embeddings.shape)
-    

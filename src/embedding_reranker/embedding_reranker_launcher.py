@@ -6,10 +6,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from vllm.logger import init_logger
 
-from app.config_loader import load_config
-from embedding_reranker_server.embedding_engine.generator import \
+from src.embedding_reranker.embedding_engine.generator import \
     EmbedRerankBuilder
-from embedding_reranker_server.schema import EmbeddingRequest
+from src.embedding_reranker.schema import EmbeddingRequest
+from src.llm_router.config_loader import load_config
 
 logger = init_logger(__name__)
 

@@ -7,8 +7,8 @@ import uvloop
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config_loader import load_config
-from app.router import router
+from src.llm_router.config_loader import load_config
+from src.llm_router.router import router
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 

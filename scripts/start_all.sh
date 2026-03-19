@@ -13,8 +13,11 @@ export CONFIG_PATH="$CONFIG_PATH"
 export TORCH_CUDA_ARCH_LIST="8.0"
 
 echo "啟動所有模型..."
-python start_all_models.py --config "$CONFIG_PATH" &
+PYTHONPATH=. python scripts/start_all_models.py --config "$CONFIG_PATH" &
 sleep 5
 
 echo "啟動 Router Server（gunicorn + uvloop + 多 worker）..."
-gunicorn main:app -c gunicorn.conf.py
+
+PYTHONPATH=. gunicorn src.llm_router.main:app \
+  -c configs/gunicorn.conf.py \
+  --env CONFIG_PATH="$CONFIG_PATH"
