@@ -1,7 +1,8 @@
 import asyncio
-import httpx
 import json
 import time
+
+import httpx
 
 NUM_REQUESTS = 100
 MAX_TOKENS = 512

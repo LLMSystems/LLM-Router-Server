@@ -1,6 +1,9 @@
+from optimum.onnxruntime import (ORTModelForFeatureExtraction,
+                                 ORTModelForSequenceClassification,
+                                 ORTOptimizer)
 from optimum.onnxruntime.configuration import OptimizationConfig
-from optimum.onnxruntime import ORTOptimizer, ORTModelForFeatureExtraction, ORTModelForSequenceClassification
 from transformers import AutoTokenizer
+
 
 def optimize_embedding_model(model_path, tokenizer_path, onnx_save_path, optimization_level=2, optimize_for_gpu=True, fp16=True):
     model = ORTModelForFeatureExtraction.from_pretrained(model_id=model_path, export=True)
