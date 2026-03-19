@@ -1,3 +1,4 @@
-vllm==0.9.1
-flashinfer-python==0.2.6.post1
+vllm
+flashinfer-python
 gunicorn
+fastapi
