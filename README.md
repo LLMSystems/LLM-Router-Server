@@ -145,10 +145,7 @@ embedding_server:
       use_gpu: true
       use_float16: True
 ```
-### 2. 配置 `gunicorn.conf.py`
-
-1. 務必放在與 `main.py` 同個層級下
-2. 路由配置務必與 `configs/config.yaml` 相同
+### 2. 配置 `./configs/gunicorn.conf.py`
 
 ```python=
 # gunicorn.conf.py
@@ -166,5 +163,5 @@ preload_app = False
 ```
 ### 啟動所有模型與路由服務
 ```bash=
-sh start_all.sh ./configs/config.yaml
+sh scripts/start_all.sh ./configs/config.yaml ./configs/gunicorn.conf.py
 ```
