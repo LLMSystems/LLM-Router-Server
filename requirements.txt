@@ -2,3 +2,4 @@ vllm
 flashinfer-python
 gunicorn
 fastapi
+transformers
