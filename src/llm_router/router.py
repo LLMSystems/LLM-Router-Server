@@ -15,11 +15,31 @@ async def proxy_chat_completion(request: Request):
         if not model_cfg:
             raise HTTPException(status_code=404, detail=f"Model '{model_key}' not found.")
 
+        # 從 instances 中提取後端資訊
+        instances = model_cfg.get("instances", [])
+        if not instances:
+            raise HTTPException(status_code=500, detail=f"No instances configured for model '{model_key}'.")
+        
+        backends = {
+            instance["id"]: f"http://{instance.get('host', 'localhost')}:{instance['port']}"
+            for instance in instances
+        }
+        # 計算負載最低的後端
+        metrics_client = request.app.state.metrics_client
+        metrics = await metrics_client.fetch_many(backends)
+        best_backend_name = min(
+                                metrics.keys(),
+                                key=lambda name: metrics[name].compute_load_score()
+                            )
+        target_url = f"{backends[best_backend_name]}/v1/chat/completions"
+ 
+        
         model_tag = model_cfg["model_tag"]
         request_json["model"] = model_tag
-        host = model_cfg.get("host", "localhost")
-        port = model_cfg["port"]
-        target_url = f"http://{host}:{port}/v1/chat/completions"
+        target_url = f"{backends[best_backend_name]}/v1/chat/completions"
+        # host = model_cfg.get("host", "localhost")
+        # port = model_cfg["port"]
+        # target_url = f"http://{host}:{port}/v1/chat/completions"
 
         client = request.app.state.http_client
         stream_ctx = client.stream("POST", target_url, json=request_json)

@@ -9,12 +9,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.llm_router.config_loader import load_config
 from src.llm_router.router import router
+from src.llm_router.vllm_metrics_client import VLLMMetricsClient
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.http_client = httpx.AsyncClient(timeout=None)
+    app.state.metrics_client = VLLMMetricsClient(timeout=2.0)
     yield
     await app.state.http_client.aclose()
 
