@@ -42,18 +42,17 @@ class VLLMMetricsClient:
         "generation_tokens": "vllm:generation_tokens",
     }
     
-    def __init__(self, timeout: float = 2.0) -> None:
+    def __init__(self, http_client: httpx.AsyncClient, timeout: float = 2.0) -> None:
+        self.http_client = http_client
         self.timeout = timeout
         
     async def fetch(self, base_url: str) -> Optional[VLLMInstanceMetrics]:
         metrics_url = base_url.rstrip("/") + "/metrics"
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.get(metrics_url)
-            resp.raise_for_status()
-            text = resp.text
+        resp = await self.http_client.get(metrics_url, timeout=self.timeout)
+        resp.raise_for_status()
         
-        parsed = self.parse_metrics(text)
+        parsed = self.parse_metrics(resp.text)
             
         return VLLMInstanceMetrics(
             base_url=base_url,
@@ -66,7 +65,7 @@ class VLLMMetricsClient:
             generation_tokens=parsed.get(
                 self.METRIC_NAMES["generation_tokens"], 0.0
             ),
-            raw_metrics=text,
+            raw_metrics=resp.text,
         )
         
     async def _safe_fetch(

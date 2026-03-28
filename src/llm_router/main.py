@@ -28,8 +28,17 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting application lifespan...")
-    app.state.http_client = httpx.AsyncClient(timeout=None)
-    app.state.metrics_client = VLLMMetricsClient(timeout=2)
+    app.state.http_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(10.0, connect=2.0),
+        limits=httpx.Limits(
+            max_connections=100,
+            max_keepalive_connections=20,
+        ),
+    )
+    app.state.metrics_client = VLLMMetricsClient(
+        http_client=app.state.http_client,
+        timeout=2
+    )
     
     app.state.metrics_cache = {}
     app.state.backend_inflight = {}
