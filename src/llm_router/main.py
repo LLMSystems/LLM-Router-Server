@@ -1,5 +1,6 @@
 import asyncio
 import os
+import logging
 from contextlib import asynccontextmanager
 
 import httpx
@@ -14,12 +15,23 @@ from src.llm_router.vllm_metrics_client import VLLMMetricsClient
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
+def setup_logging() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    )
+
+
+setup_logging()
+logger = logging.getLogger(__name__)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("Starting application lifespan...")
     app.state.http_client = httpx.AsyncClient(timeout=None)
     app.state.metrics_client = VLLMMetricsClient(timeout=2)
     
-    app.state.metric_cache = {}
+    app.state.metrics_cache = {}
     app.state.backend_inflight = {}
     app.state.backend_health = {}
     
@@ -28,6 +40,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        logger.info("Shutting down application lifespan...")
         metrics_task.cancel()
         try:
             await metrics_task

@@ -1,14 +1,14 @@
 from typing import Any, Dict
 
 from fastapi import HTTPException
-from vllm.logger import init_logger
+import logging
 
 from src.llm_router.backend_runtime_state import (FAIL_OPEN_PENALTY,
                                                   INFLIGHT_WEIGHT,
                                                   get_inflight,
                                                   is_backend_in_cooldown)
 
-logger = init_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 async def select_instance_least_load(
@@ -47,7 +47,14 @@ async def select_instance_least_load(
 
         final_score = base_score + inflight_penalty + cooldown_penalty
 
-        print(f"Instance {instance_id} has load score {final_score:.4f}, base_score={base_score:.4f}, inflight_penalty={inflight_penalty:.4f}, cooldown_penalty={cooldown_penalty:.4f}")
+        logger.info(
+            "Instance %s has load score %.4f, base_score=%.4f, inflight_penalty=%.4f, cooldown_penalty=%.4f",
+            instance_id,
+            final_score,
+            base_score,
+            inflight_penalty,
+            cooldown_penalty,
+        )
         
         if final_score < best_score:
             best_score = final_score

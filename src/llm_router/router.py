@@ -1,14 +1,14 @@
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from vllm.logger import init_logger
+import logging
 
 from src.llm_router.backend_runtime_state import (decr_inflight, incr_inflight,
                                                   mark_backend_failure,
                                                   mark_backend_success)
 from src.llm_router.backend_selector import select_instance_least_load
 
-logger = init_logger(__name__)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
