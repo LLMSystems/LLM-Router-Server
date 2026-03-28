@@ -20,6 +20,7 @@
 - **OpenAI-Compatible API**: Provides fully compatible OpenAI API interfaces (`/v1/chat/completions`, `/v1/completions`, `/v1/embeddings`)
 - **Configuration-Based Deployment**: Easily manage startup parameters, ports, GPU allocation, etc. for multiple models through YAML configuration files
 - **Multi-Model Parallelism**: Supports multiple model instances running simultaneously, each using independent processes and GPU resources
+- **Intelligent Load Balancing**: Automatically selects the least-loaded instance based on real-time metrics (running requests, waiting requests, KV cache usage)
 - **High-Performance Forwarding**: High-performance asynchronous architecture based on FastAPI + Gunicorn + Uvloop
 - **Streaming Response Optimization**: Optimizes streaming requests to ensure low latency and stable token output
 
@@ -39,6 +40,20 @@
 - Supports dynamic configuration of model count, GPU memory allocation, concurrent request numbers, and other parameters
 - Models are isolated from each other; a single model failure does not affect other services
 
+### Intelligent Load Balancing
+- **Real-Time Metrics Monitoring**: Continuously polls vLLM `/metrics` endpoint for each instance to gather:
+  - Number of running requests
+  - Number of waiting requests
+  - KV cache usage percentage
+  - Total prompt and generation tokens
+- **Least-Load Selection**: Automatically routes requests to the instance with the lowest load score
+- **Load Score Calculation**: Combines multiple metrics with configurable weights:
+  - Waiting requests weight: 10.0
+  - Running requests weight: 3.0
+  - KV cache usage weight: 100.0
+- **Health Monitoring**: Tracks backend health status and applies cooldown periods for failed instances
+- **Inflight Request Tracking**: Monitors in-flight requests to prevent overloading any single instance
+
 ### Embedding and Reranker Integration
 - Built-in Embedding server and Reranker server
 - Supports multiple Embedding models (m3e-base, bge-m3, etc.)
@@ -54,9 +69,15 @@
 
 1. **Client Request**: Client sends requests to Router Server via OpenAI SDK or HTTP client
 2. **Route Resolution**: Router looks up corresponding backend service configuration based on the `model` parameter in the request
-3. **Request Forwarding**: Forwards the request to the corresponding vLLM or Embedding service
-4. **Streaming Processing**: Optimizes streaming responses to ensure low-latency transmission
-5. **Response Return**: Returns the backend service response to the client as-is
+3. **Load-Based Instance Selection**: For models with multiple instances:
+   - Fetches real-time metrics from all instances
+   - Calculates load score for each instance
+   - Selects the instance with the lowest load
+   - Considers health status and cooldown periods
+4. **Request Forwarding**: Forwards the request to the selected vLLM or Embedding service instance
+5. **Streaming Processing**: Optimizes streaming responses to ensure low-latency transmission
+6. **Health Tracking**: Monitors request success/failure and updates instance health status
+7. **Response Return**: Returns the backend service response to the client as-is
 
 ---
 
