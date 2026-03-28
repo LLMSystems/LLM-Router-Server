@@ -1,18 +1,15 @@
 import asyncio
+import logging
 from typing import Any, Dict
 
-from vllm.logger import init_logger
-
-logger = init_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 async def poll_metrics_forever(app, interval: float = 1.0):
     logger.info("Starting metrics poller with interval=%.2fs", interval)
-    print("Starting metrics poller with interval=%.2fs" % interval)
 
     try:
         while True:
-            print("Polling metrics...")
             config = app.state.config
             metrics_client = app.state.metrics_client
 

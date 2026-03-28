@@ -1,6 +1,6 @@
 import asyncio
-import os
 import logging
+import os
 from contextlib import asynccontextmanager
 
 import httpx

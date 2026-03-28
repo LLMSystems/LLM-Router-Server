@@ -1,7 +1,8 @@
+import logging
+
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-import logging
 
 from src.llm_router.backend_runtime_state import (decr_inflight, incr_inflight,
                                                   mark_backend_failure,
