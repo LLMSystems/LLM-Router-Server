@@ -115,36 +115,31 @@ pip install -r requirements.txt
 
 #### LLM 引擎配置
 
-配置一個或多個 LLM 模型：
+配置一個或多個 LLM 模型，支援多實例部署：
 ```yaml
 LLM_engines:
-  # 第一個模型
-  Qwen2.5-14B-Instruct:
-    model_tag: "models/Qwen2.5-14B-Instruct"  # 模型路徑或 
-    host: "localhost"                          # 服務主機
-    port: 8001                                 # 服務埠口
-    dtype: "float16"                           # 資料類型
-    max_model_len: 16000                       # 最大序列長度
-    gpu_memory_utilization: 0.4                # GPU 記憶體使用率
-    max_num_seqs: 10                           # 最大並行序列數
-    tensor_parallel_size: 1                    # Tensor 並行大小
-    cuda_device: 1                             # 使用的 CUDA 裝置編號
-    enable_auto_tool_choice: true              # 啟用自動工具選擇
-    tool-call-parser: "hermes"                 # 工具調用解析器
-  
-  # 第二個模型
-  Qwen2.5-32B-Instruct-GPTQ-Int4:
-    model_tag: "models/Qwen2.5-32B-Instruct-GPTQ-Int4"
-    host: "localhost"
-    port: 8002
-    dtype: "float16"
-    max_model_len: 16000
-    gpu_memory_utilization: 0.37
-    max_num_seqs: 10
-    tensor_parallel_size: 1
-    cuda_device: 1
-    enable_auto_tool_choice: true
-    tool-call-parser: "hermes"
+  # 模型配置（支援多實例）
+  Qwen3-0.6B:
+    instances:
+      # 第一個實例
+      - id: "qwen3-1"                         # 實例 ID
+        host: "localhost"                     # 服務主機
+        port: 8002                            # 服務埠口
+        cuda_device: 0                        # CUDA 裝置編號
+      
+      # 第二個實例
+      - id: "qwen3-2"                         # 實例 ID
+        host: "localhost"                     # 服務主機
+        port: 8004                            # 服務埠口
+        cuda_device: 0                        # CUDA 裝置編號
+    
+    # 模型配置（所有實例共享）
+    model_config:
+      model_tag: "Qwen/Qwen3-0.6B"           # 模型路徑或 HuggingFace ID
+      dtype: "float16"                       # 資料類型
+      max_model_len: 500                     # 最大序列長度
+      gpu_memory_utilization: 0.35           # GPU 記憶體使用率
+      tensor_parallel_size: 1                # Tensor 並行大小
 
 # Embedding 與 Reranking 伺服器配置
 embedding_server:
@@ -184,17 +179,19 @@ embedding_server:
 #### 配置參數說明
 
 **LLM 引擎參數：**
-- `model_tag`：模型檔案路徑或 HuggingFace 模型 ID
+
+*實例配置：*
+- `id`：實例的唯一識別碼
 - `host`：vLLM 服務監聽的主機地址
 - `port`：vLLM 服務監聽的埠口
+- `cuda_device`：指定使用的 GPU 裝置編號
+
+*模型配置（所有實例共享）：*
+- `model_tag`：模型檔案路徑或 HuggingFace 模型 ID
 - `dtype`：模型精度類型（`float16`、`bfloat16` 等）
 - `max_model_len`：最大上下文長度
 - `gpu_memory_utilization`：GPU 記憶體使用率（0.0-1.0）
-- `max_num_seqs`：最大並行處理的請求數
 - `tensor_parallel_size`：Tensor 並行度（多 GPU 推理）
-- `cuda_device`：指定使用的 GPU 裝置編號
-- `enable_auto_tool_choice`：是否啟用自動工具選擇
-- `tool-call-parser`：工具調用解析器類型
 
 **Embedding 伺服器參數：**
 - `host`、`port`：伺服器監聽地址與埠口

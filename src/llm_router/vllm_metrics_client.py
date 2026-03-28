@@ -1,7 +1,10 @@
+import asyncio
 import re
 from dataclasses import dataclass
 from typing import Dict, Optional
+
 import httpx
+
 
 @dataclass
 class VLLMInstanceMetrics:
@@ -65,6 +68,25 @@ class VLLMMetricsClient:
             ),
             raw_metrics=text,
         )
+        
+    async def _safe_fetch(
+        self,
+        backend_name: str,
+        base_url: str,
+    ) -> tuple[str, VLLMInstanceMetrics]:
+        try:
+            metrics = await self.fetch(base_url)
+            return backend_name, metrics
+        except Exception:
+            return backend_name, VLLMInstanceMetrics(
+                base_url=base_url,
+                running=float("inf"),
+                waiting=float("inf"),
+                kv_cache_usage_perc=1.0,
+                prompt_tokens=float("inf"),
+                generation_tokens=float("inf"),
+                raw_metrics=None,
+            )
     
     async def fetch_many(
         self,
@@ -82,24 +104,14 @@ class VLLMMetricsClient:
 
         Returns:
             Dict[str, VLLMInstanceMetrics]
-        """
-        results: Dict[str, VLLMInstanceMetrics] = {}
-
-        for backend_name, base_url in backends.items():
-            try:
-                results[backend_name] = await self.fetch(base_url)
-            except Exception:
-                results[backend_name] = VLLMInstanceMetrics(
-                    base_url=base_url,
-                    running=float("inf"),
-                    waiting=float("inf"),
-                    kv_cache_usage_perc=1.0,
-                    prompt_tokens=float("inf"),
-                    generation_tokens=float("inf"),
-                    raw_metrics=None,
-                )
-
-        return results
+        """       
+         
+        tasks = [
+            self._safe_fetch(backend_name, base_url) for backend_name, base_url in backends.items()
+        ]
+        
+        pairs = await asyncio.gather(*tasks)
+        return dict(pairs)
 
     def parse_metrics(self, text: str) -> Dict[str, float]:
         """

@@ -8,15 +8,33 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.llm_router.config_loader import load_config
+from src.llm_router.metrics_poller import poll_metrics_forever
 from src.llm_router.router import router
+from src.llm_router.vllm_metrics_client import VLLMMetricsClient
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.http_client = httpx.AsyncClient(timeout=None)
-    yield
-    await app.state.http_client.aclose()
+    app.state.metrics_client = VLLMMetricsClient(timeout=2)
+    
+    app.state.metric_cache = {}
+    app.state.backend_inflight = {}
+    app.state.backend_health = {}
+    
+    metrics_task = asyncio.create_task(poll_metrics_forever(app, interval=1.0))
+    app.state.metrics_task = metrics_task
+    try:
+        yield
+    finally:
+        metrics_task.cancel()
+        try:
+            await metrics_task
+        except asyncio.CancelledError:
+            pass
+
+        await app.state.http_client.aclose()
 
 def create_app(config: dict) -> FastAPI:
     app = FastAPI(title="LLM Router API", version="0.1.0", lifespan=lifespan)

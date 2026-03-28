@@ -117,36 +117,31 @@ The main configuration file is located at `configs/config.yaml` and contains two
 
 #### LLM Engine Configuration
 
-Configure one or more LLM models:
+Configure one or more LLM models with multiple instances:
 ```yaml
 LLM_engines:
-  # First model
-  Qwen2.5-14B-Instruct:
-    model_tag: "models/Qwen2.5-14B-Instruct"  # Model path or HuggingFace ID
-    host: "localhost"                          # Service host
-    port: 8001                                 # Service port
-    dtype: "float16"                           # Data type
-    max_model_len: 16000                       # Maximum sequence length
-    gpu_memory_utilization: 0.4                # GPU memory utilization
-    max_num_seqs: 10                           # Maximum parallel sequences
-    tensor_parallel_size: 1                    # Tensor parallel size
-    cuda_device: 1                             # CUDA device number to use
-    enable_auto_tool_choice: true              # Enable automatic tool choice
-    tool-call-parser: "hermes"                 # Tool call parser
-  
-  # Second model
-  Qwen2.5-32B-Instruct-GPTQ-Int4:
-    model_tag: "models/Qwen2.5-32B-Instruct-GPTQ-Int4"
-    host: "localhost"
-    port: 8002
-    dtype: "float16"
-    max_model_len: 16000
-    gpu_memory_utilization: 0.37
-    max_num_seqs: 10
-    tensor_parallel_size: 1
-    cuda_device: 1
-    enable_auto_tool_choice: true
-    tool-call-parser: "hermes"
+  # Model with multiple instances
+  Qwen3-0.6B:
+    instances:
+      # First instance
+      - id: "qwen3-1"                         # Instance ID
+        host: "localhost"                     # Service host
+        port: 8002                            # Service port
+        cuda_device: 0                        # CUDA device number
+      
+      # Second instance
+      - id: "qwen3-2"                         # Instance ID
+        host: "localhost"                     # Service host
+        port: 8004                            # Service port
+        cuda_device: 0                        # CUDA device number
+    
+    # Model configuration (shared by all instances)
+    model_config:
+      model_tag: "Qwen/Qwen3-0.6B"           # Model path or HuggingFace ID
+      dtype: "float16"                       # Data type
+      max_model_len: 500                     # Maximum sequence length
+      gpu_memory_utilization: 0.35           # GPU memory utilization
+      tensor_parallel_size: 1                # Tensor parallel size
 
 # Embedding and Reranking server configuration
 embedding_server:
@@ -186,17 +181,19 @@ embedding_server:
 #### Configuration Parameters
 
 **LLM Engine Parameters:**
-- `model_tag`: Model file path or HuggingFace model ID
+
+*Instance Configuration:*
+- `id`: Unique identifier for the instance
 - `host`: Host address for vLLM service to listen on
 - `port`: Port for vLLM service to listen on
+- `cuda_device`: GPU device number to use
+
+*Model Configuration (shared by all instances):*
+- `model_tag`: Model file path or HuggingFace model ID
 - `dtype`: Model precision type (`float16`, `bfloat16`, etc.)
 - `max_model_len`: Maximum context length
 - `gpu_memory_utilization`: GPU memory utilization (0.0-1.0)
-- `max_num_seqs`: Maximum number of concurrent requests to process
 - `tensor_parallel_size`: Tensor parallelism degree (multi-GPU inference)
-- `cuda_device`: GPU device number to use
-- `enable_auto_tool_choice`: Whether to enable automatic tool selection
-- `tool-call-parser`: Tool call parser type
 
 **Embedding Server Parameters:**
 - `host`, `port`: Server listening address and port
